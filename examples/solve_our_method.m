@@ -3,7 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 lam_min = sqrt(c+1)*(cos(1/3*acos(-(c-1)/(c+1)))-0.5);
 pow_func = @(x) (sqrt(c+1)+x).^2./(x.^2*c+(sqrt(c+1)+x).^2);
-[pow_func_m, pow_func_c] = function_affine(0, 1e-2, 200, lam_min, pow_func, 1e-3, lam_min);
+[pow_func_m, pow_func_c] = function_affine(0, 1e-3, 1000, lam_min, pow_func, 1e-4, lam_min);
 
 hat_a = (1-safety_collision_2_v) / 24;
 hat_lam = ((hat_a-1)*sqrt(c+1)-sqrt(c*hat_a*(1-hat_a)*(c + 1)))/(1-hat_a*(c+1));
@@ -44,8 +44,8 @@ while iter <= iter_max
         variable slack(time_horizon, 3) nonnegative;
         
         % targe set
-        variable lambda(n_lin_state, 3);
-        variable lambda_temp(n_lin_state, 3);
+        variable lambda(n_lin_state, 3) nonnegative;
+        variable lambda_temp(n_lin_state, 3) nonnegative;
         
         % cost params
         variable sum_slack(1,1);
@@ -75,7 +75,7 @@ while iter <= iter_max
             %----------------------------
             % colission avoidance constraint (intervehicle)
             %----------------------------
-            vec(slack) >= 0;
+%             vec(slack) >= 0;
             for k = 1:time_horizon
                 hat_lam * norm( vars_ab((k-1)*4+(1:4),:) * [(x_mean_our_method(6*(k-1)+[1:3], 1) - x_mean_our_method(6*(k-1)+[1:3],2)); 1] ) - ...
                     norm_approx_ab(k) - norm_approx_gradient_ab(k,:) * [U(:,1) - U_p(:,1);U(:,2) - U_p(:,2)] - ...
@@ -96,11 +96,11 @@ while iter <= iter_max
              
             % mean in shrunk target set
             target_set_all_A * (x_mean_our_method(end-5:end, 1) + Wd_concat(end-5:end,:)*W_a_mean) + ...
-                 diag(target_set_all_A * Wd_concat(end-5:end,:) * W_a_var * Wd_concat(end-5:end,:)' * target_set_all_A') .* lambda(:,1) - target_set_all_b(:,1) <= 0;
+                 sqrt(diag(target_set_all_A * Wd_concat(end-5:end,:) * W_a_var * Wd_concat(end-5:end,:)' * target_set_all_A')) .* lambda(:,1) - target_set_all_b(:,1) <= 0;
             target_set_all_A * (x_mean_our_method(end-5:end, 2) + Wd_concat(end-5:end,:)*W_b_mean) + ...
-                 diag(target_set_all_A * Wd_concat(end-5:end,:) * W_b_var * Wd_concat(end-5:end,:)' * target_set_all_A') .* lambda(:,2) - target_set_all_b(:,2) <= 0;
+                 sqrt(diag(target_set_all_A * Wd_concat(end-5:end,:) * W_b_var * Wd_concat(end-5:end,:)' * target_set_all_A')) .* lambda(:,2) - target_set_all_b(:,2) <= 0;
             target_set_all_A * (x_mean_our_method(end-5:end, 3) + Wd_concat(end-5:end,:)*W_c_mean) + ...
-                 diag(target_set_all_A * Wd_concat(end-5:end,:) * W_c_var * Wd_concat(end-5:end,:)' * target_set_all_A') .* lambda(:,3) - target_set_all_b(:,3) <= 0;
+                 sqrt(diag(target_set_all_A * Wd_concat(end-5:end,:) * W_c_var * Wd_concat(end-5:end,:)' * target_set_all_A')) .* lambda(:,3) - target_set_all_b(:,3) <= 0;
             
             for i = 1:(n_lin_state)
                 for j = 1:3
@@ -110,7 +110,7 @@ while iter <= iter_max
             sum(vec(lambda_temp)) <= 1-safety_target;
             
     cvx_end
-
+    
     % update Costs
     input_cost_our_method(iter+1) = quad_input_cost;
     lambda_sum_our_method(iter+1) = sum_slack;
@@ -172,4 +172,4 @@ end
 % verify probabilities
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%[P_target_our_method, P_mav_our_method, P_uav_our_method] = verify(x_mean_our_method, x_mav_mean, Wd_concat, mu_concat, time_horizon, target_sets, r, 10000)
+[P_target_our_method, P_col_our_method] = verify(x_mean_our_method, Wd_concat, time_horizon, target_sets, r, 10000)
