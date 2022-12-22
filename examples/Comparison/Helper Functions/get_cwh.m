@@ -1,6 +1,5 @@
-function [Ad_concat, Bd_concat, Wd_concat] = get_cwh(time_horizon)
+function [Ad_concat, Bd_concat, Wd_concat] = get_cwh(sampling_period, time_horizon)
 
-    sampling_period              = 30;                                              % sec
     orbital_radius               = (2000 + 6378.1) * 1000;                          % m
     gravitational_constant       = 6.673e-11;                                       % m^3 kg^-1 sec^-2
     celestial_mass               = 5.9472e24;                                       % kg
